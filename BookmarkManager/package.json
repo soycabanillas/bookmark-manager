@@ -1,0 +1,17 @@
+{
+  "name": "bookmark-manager",
+  "version": "1.0.0",
+  "description": "Bookmark Manager using Electron and SQLite",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "electron": "^29.1.1",
+    "sqlite3": "^5.1.7"
+  }
+}
