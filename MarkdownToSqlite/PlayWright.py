@@ -16,6 +16,10 @@ if 'image' not in [column[1] for column in columns]:
     # Add the 'image' column to the 'url' table
     cursor.execute('ALTER TABLE url ADD COLUMN image BLOB')
 
+if 'thumbnail' not in [column[1] for column in columns]:
+    # Add the 'thumbnail' column to the 'url' table
+    cursor.execute('ALTER TABLE url ADD COLUMN thumbnail BLOB')
+
 # Check if the 'captured_date' column exists in the 'url' table
 if 'captured_date' not in [column[1] for column in columns]:
     # Add the 'captured_date' column to the 'url' table
@@ -42,7 +46,7 @@ async def capture_webpage_image(url):
             response = await page.goto(url, wait_until='networkidle', timeout=60000)  # Increase timeout to 60 seconds
             status_code = response.status
             final_url = response.url
-            screenshot = await page.screenshot(full_page=True) if status_code < 400 or status_code >= 600 else None
+            screenshot = await page.screenshot(full_page=False) if status_code < 400 or status_code >= 600 else None
         except Exception as e:
             print(f"Error capturing webpage for URL: {url}. Error: {str(e)}")
             status_code = 0
@@ -65,42 +69,58 @@ async def process_urls():
     async def process_url(url_id, url):
         async with semaphore:
             print(f"Processing URL: {url}")
-            image_data, status_code, final_url = await capture_webpage_image(url)
 
-            captured_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            max_retries = 3
+            retry_count = 0
+            successful_capture = False
 
-            if status_code < 400 or status_code >= 600:
+            while retry_count <= max_retries and not successful_capture:
+                image_data, status_code, final_url = await capture_webpage_image(url)
+                captured_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+                # Check if the capture is successful
+                if image_data is not None:
+                    successful_capture = True
+                else:
+                    # Determine if conditions for retry are met
+                    if not (400 <= status_code < 600):
+                        retry_count += 1
+                        print(f"Retry {retry_count} for URL: {url}. Status Code: {status_code}")
+                    else:
+                        # If status code indicates a client error, do not retry
+                        break
+
+            if successful_capture:
                 try:
-                    # Convert PNG to WebP and reduce quality
+                    # Convert PNG to WebP, reduce quality for the main image, and create thumbnail
                     image = Image.open(BytesIO(image_data))
-                    output = BytesIO()
+                    output_main = BytesIO()
+                    image.save(output_main, format='WebP', quality=50)
+                    image_data_main = output_main.getvalue()
+
+                    # Create and save the thumbnail
+                    thumbnail_size = (200, 150)  # Maintain aspect ratio
+                    image.thumbnail(thumbnail_size, Image.Resampling.LANCZOS)
+                    output_thumb = BytesIO()
+                    image.save(output_thumb, format='WebP', quality=50)
+                    image_data_thumbnail = output_thumb.getvalue()
+
                 except Exception as e:
-                    print(f"Error transforming image for URL: {url}. Error: {str(e)}")
+                    print(f"Error processing image for URL: {url}. Error: {str(e)}")
                     return
 
-                max_retries = 3
-                retry_count = 0
-                while retry_count < max_retries:
-                    try:
-                        image.save(output, format='WebP', quality=50)
-                        break
-                    except Exception as e:
-                        print(f"Error saving image for URL: {url}. Error: {str(e)}")
-                        retry_count += 1
-                        if retry_count == max_retries:
-                            print(f"Max retries reached for URL: {url}. Skipping...")
-                            return
-
-                image_data = output.getvalue()
                 cursor.execute(
-                    'UPDATE url SET image = ?, captured_date = ?, status_code = ?, url_redirected = ? WHERE id = ?',
-                    (image_data, captured_date, status_code, final_url, url_id))
+                    'UPDATE url SET image = ?, thumbnail = ?, captured_date = ?, status_code = ?, url_redirected = ? WHERE id = ?',
+                    (image_data_main, image_data_thumbnail, captured_date, status_code, final_url, url_id))
             else:
+                print(f"Failed to capture screenshot after {retry_count} retries for URL: {url}.")
+                # Update the database with attempt details even if capture fails
                 cursor.execute('UPDATE url SET captured_date = ?, status_code = ?, url_redirected = ? WHERE id = ?',
                                (captured_date, status_code, final_url, url_id))
 
             conn.commit()
-            print(f"URL processed: {url} (Status Code: {status_code}, Redirected URL: {final_url})")
+            print(
+                f"URL processed: {url} (Status Code: {status_code}, Redirected URL: {final_url}, Retries: {retry_count})")
 
     # Process URLs concurrently
     tasks = []
