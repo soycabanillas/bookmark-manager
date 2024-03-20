@@ -1,3 +1,4 @@
+const { ipcRenderer } = require('electron');
 const sqlite3 = require('sqlite3').verbose();
 const db = new sqlite3.Database('../MarkdownToSqlite/urls.db');
 
@@ -59,7 +60,7 @@ function loadBookmarks() {
           <input type="text" value="${bookmark.url}" data-id="${bookmark.id}" readonly>
           <input type="text" value="${bookmark.domain}" data-id="${bookmark.id}">
           <input type="text" value="${bookmark.title}" data-id="${bookmark.id}">
-          <button class="deleteButton" data-id="${bookmark.id}">Delete</button>
+          <button class="deleteButton" data-id="${bookmark.id}" data-url="${bookmark.url}"">Delete</button>
         `;
                 bookmarkGrid.appendChild(bookmarkElement);
             };
@@ -95,9 +96,10 @@ bookmarkGrid.addEventListener('input', (event) => {
 
 bookmarkGrid.addEventListener('click', (event) => {
     if (event.target.classList.contains('deleteButton')) {
-        const id = event.target.dataset.id;
-        deleteBookmark(id);
-        event.target.parentElement.remove();
+        ipcRenderer.send('capture-page', event.target.dataset.url)
+        // const id = event.target.dataset.id;
+        // deleteBookmark(id);
+        // event.target.parentElement.remove();
     }
 });
 
