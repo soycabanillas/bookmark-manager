@@ -2,11 +2,11 @@ class InfiniteGrid extends HTMLElement {
     constructor() {
         super();
         this.isRequestAnimationFramePending = false;
-        this.attachShadow({ mode: 'open' });
+        const shadow = this.attachShadow({ mode: 'open' });
         this.shadowRoot.innerHTML = `
       <style>
         /* Styles for your grid */
-        .grid {
+        .grid-container {
           display: flex;
           flex-wrap: wrap;
           gap: 10px;
@@ -17,8 +17,8 @@ class InfiniteGrid extends HTMLElement {
           border: 1px solid #ccc;
           padding: 10px;
           margin: 10px;
-          width: 100px;
-          height: 100px;
+          width: 200px;
+          /*height: 100px;*/
           display: flex;
           justify-content: center;
           align-items: center;
@@ -29,13 +29,43 @@ class InfiniteGrid extends HTMLElement {
           height: 50px;
           clear: both;
         }
+        p {
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+            width: 100%; /* Ensure it respects the container's width */
+        }
       </style>
-      <div class="grid"></div>
-      <div class="sentinel"></div>
     `;
+        // Create grid container
+        this.grid = document.createElement('div');
+        this.grid.classList.add('grid-container');
 
-        this.grid = this.shadowRoot.querySelector('.grid');
-        this.sentinel = this.shadowRoot.querySelector('.sentinel');
+        // Add event listener for delete button clicks
+        this.grid.addEventListener('click', (event) => {
+            // Check if the clicked element is a button and has the class 'delete-button'
+            if (event.target.tagName === 'BUTTON' && event.target.classList.contains('delete-button')) {
+                console.log('Delete button clicked');
+                // Handle delete action here, such as removing the item element
+                // Navigate up the DOM to find and remove the .item element
+                event.target.closest('.item').remove();
+            }
+        });
+
+        // Create pop-up element
+        this.popup = document.createElement('popup-element');
+        document.body.appendChild(this.popup); // Append to body to cover the whole page
+
+        // Bind the click listener function, so it can be properly removed later
+        this.boundClickListener = this.handleGridClick.bind(this);
+        this.grid.addEventListener('click', this.boundClickListener);
+
+        // Create sentinel
+        this.sentinel = document.createElement('div');
+        this.sentinel.classList.add('sentinel');
+
+        shadow.appendChild(this.grid);
+        shadow.appendChild(this.sentinel);
 
         this.observer = new IntersectionObserver(entries => {
             entries.forEach(entry => {
@@ -47,12 +77,37 @@ class InfiniteGrid extends HTMLElement {
         }, { rootMargin: '100px' });
     }
 
+    handleGridClick(event) {
+        let target = event.target;
+        // Check if the clicked target is not the delete button
+        if (!(target.classList.contains('action') || target.closest('.action'))) {
+            // Ensure click inside item
+            if (target.classList.contains('item') || target.closest('.item')) {
+                const item = target.closest('.item');
+                // Assuming img and p elements are direct children for simplicity
+                const imgSrc = item.querySelector('img').src;
+                const text = item.querySelector('p').textContent;
+
+                this.popup.show(imgSrc, text); // Show the pop-up with the item's details
+            }
+        }
+    }
+
     connectedCallback() {
         this.observer.observe(this.sentinel);
     }
 
     disconnectedCallback() {
-        this.observer.disconnect();
+        // Remove the event listener from the grid
+        // Assuming you've stored the listener function somewhere accessible
+        this.grid.removeEventListener('click', this.boundClickListener);
+
+        // Remove the pop-up from the body if it exists
+        if (this.popup && this.popup.parentNode) {
+            this.popup.parentNode.removeChild(this.popup);
+        }
+
+        // Additionally, if you set up any global event listeners or timers, clean those up here
     }
 
     loadMoreItems(newItems) {
@@ -62,6 +117,7 @@ class InfiniteGrid extends HTMLElement {
             itemElement.innerHTML = `
         <img src="${item.image}" alt="Item image" style="max-width: 100%; height: auto;">
         <p>${item.text}</p>
+        <button class="delete-button action">Delete</button>
       `;
             this.grid.appendChild(itemElement);
         });
