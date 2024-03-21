@@ -1,10 +1,11 @@
 import { LitElement, html, css } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
+import { IBookmark } from "../../preload/dbconnectionapi";
 
 
 @customElement('infinite-grid')
 export class InfiniteGrid extends LitElement {
-  @state() items: Array<{ image: string; text: string }> = []
+  @state() items: IBookmark[] = []
 
   static styles = css`
     .grid-container {
@@ -52,7 +53,7 @@ export class InfiniteGrid extends LitElement {
     // Cleanup logic here
   }
 
-  loadMoreItems(newItems: Array<{ image: string; text: string }>) {
+  loadMoreItems(newItems: IBookmark[]) {
     this.items = [...this.items, ...newItems]
     // Additional logic for handling requestAnimationFrame, if necessary
   }
@@ -62,13 +63,13 @@ export class InfiniteGrid extends LitElement {
       <div class="grid-container">
         ${this.items.map(item => html`
           <div class="item">
-            <img src="${item.image}" alt="Item image" style="max-width: 100%; height: auto;">
-            <p>${item.text}</p>
+            <img src="${item.thumbnail}" alt="Item image" style="max-width: 100%; height: auto;">
+            <p>${item.title}</p>
             <button class="delete-button action" @click="${this.deleteItem}">Delete</button>
           </div>
         `)}
         <div class="sentinel"></div>
-      </div><p>helllookkkkkkk</p>
+      </div>
     `
   }
 
@@ -77,7 +78,7 @@ export class InfiniteGrid extends LitElement {
     const itemElement = button.closest('.item')
     if (itemElement) {
       // Find the item index and remove it from the items array
-      const index = this.items.findIndex(item => item.text === itemElement.querySelector('p')?.textContent);
+      const index = this.items.findIndex(item => item.title === itemElement.querySelector('p')?.textContent);
       if (index > -1) {
         this.items.splice(index, 1)
         this.requestUpdate() // Request an update to re-render the component

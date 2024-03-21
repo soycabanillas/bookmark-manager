@@ -1,3 +1,6 @@
+import { InfiniteGrid } from "./infinite-grid";
+import { IBookmark } from "../../preload/dbconnectionapi";
+
 function init(): void {
   window.addEventListener('DOMContentLoaded', () => {
     doAThing()
@@ -5,14 +8,16 @@ function init(): void {
 }
 
 function doAThing(): void {
-  const versions = window.electron.process.versions
-  replaceText('.electron-version', `Electron v${versions.electron}`)
-  replaceText('.chrome-version', `Chromium v${versions.chrome}`)
-  replaceText('.node-version', `Node v${versions.node}`)
-
+  replaceText('.electron-version', `Electron v${window.api.electron()}`)
+  replaceText('.chrome-version', `Chromium v${window.api.chrome()}`)
+  replaceText('.node-version', `Node v${window.api.node()}`)
   const ipcHandlerBtn = document.getElementById('ipcHandler')
-  ipcHandlerBtn?.addEventListener('click', () => {
-    window.electron.ipcRenderer.send('ping')
+  ipcHandlerBtn?.addEventListener('click', async () => {
+    // @ts-ignore
+    const grid : InfiniteGrid = document.querySelector('infinite-grid');
+    // @ts-ignore
+    const bookmarks : IBookmark[] = await window.api.doAThing(50,10)
+    grid.loadMoreItems(bookmarks)
   })
 }
 

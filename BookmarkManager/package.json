@@ -21,10 +21,10 @@
     "build:linux": "npm run build && electron-builder --linux"
   },
   "dependencies": {
-    "@electron-toolkit/preload": "^3.0.0",
     "@electron-toolkit/utils": "^3.0.0",
     "electron-updater": "^6.1.7",
-    "lit": "^3.1.2"
+    "lit": "^3.1.2",
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^2.0.0",
