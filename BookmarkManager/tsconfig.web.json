@@ -1,15 +1,21 @@
 {
   "extends": "@electron-toolkit/tsconfig/tsconfig.web.json",
-  "include": ["src/renderer/**/*.ts", "src/preload/*.d.ts"],
+  "include": [
+    "src/renderer/src/env.d.ts",
+    "src/renderer/src/**/*",
+    "src/renderer/src/**/*.vue",
+    "src/preload/*.d.ts"
+  ],
   "compilerOptions": {
-    //https://electron-vite.org/guide/typescript-decorator
-    //https://github.com/alex8088/electron-vite-decorator-example/blob/master/tsconfig.node.json
-    //https://lit.dev/docs/components/properties/#avoiding-issues-with-class-fields
-    //https://lit.dev/docs/components/decorators/#decorators-typescript
     "composite": true,
-    "experimentalDecorators": true,
-    "useDefineForClassFields": false,
-    "emitDecoratorMetadata": true,
-    "strictPropertyInitialization": false
+    "baseUrl": ".",
+    "paths": {
+      "@renderer/*": [
+        "src/renderer/src/*"
+      ],
+      "@preload/*": [
+        "src/preload/*"
+      ]
+    }
   }
 }
